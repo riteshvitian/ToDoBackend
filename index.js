@@ -10,7 +10,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: "*",
+    origin: "https://todofrontend-rk35.onrender.com",
   })
 );
 
