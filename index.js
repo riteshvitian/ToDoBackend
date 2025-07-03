@@ -10,7 +10,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: "https://todofrontend-rk35.onrender.com", // replace with your frontend
+    origin: "https://todobackend-ttmx.onrender.com", // replace with your frontend
     methods: ["GET", "POST", "PATCH", "DELETE"],
     credentials: true,
   })
