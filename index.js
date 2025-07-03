@@ -40,7 +40,7 @@ const Task = mongoose.model("Task", taskSchema);
 
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
-  const hashed = await bcrypt(password, 10);
+  const hashed = await bcrypt.hash(password, 10);
   const user = new User({ username, password: hashed });
   await user.save();
   res.json({ message: "User has been registered" });
@@ -52,7 +52,7 @@ app.post("/login", async (req, res) => {
   if (!user || !(await bcrypt.compare(password, user.password))) {
     return res.status(401).json({ message: "Invalid Credentials" });
   }
-  const token = jwt.sign({ userId: user._id }, "secret", { expiresIn: "1hr" });
+  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
   res.json({ token });
 });
 
@@ -60,7 +60,7 @@ const authMiddleware = (req, res, next) => {
   const token = req.header("Authorization")?.replace("Bearer ", "");
   if (!token) return res.status(401).json({ message: "No token" });
   try {
-    const decode = jwt.verify(token, "secret");
+    const decode = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decode.userId;
     next();
   } catch (e) {
@@ -79,17 +79,18 @@ app.post("/tasks", authMiddleware, async (req, res) => {
 });
 
 app.delete("/tasks/:id", authMiddleware, async (req, res) => {
-  await Task.findOneAndDelete({ _id: req.params.id.userId });
+  await Task.findOneAndDelete({ _id: req.params.id, userId: req.userId });
   res.json({ message: "Task deleted" });
 });
 
 app.patch("/tasks/:id/status", authMiddleware, async (req, res) => {
   const { status } = req.body;
-  const task = await Task.findOneAndReplace(
-    { _id: req.params.id, userId: req.userId },
-    { status },
-    { new: true }
-  );
+  const task = await Task.findOneAndUpdate(
+  { _id: req.params.id, userId: req.userId },
+  { $set: { status } },
+  { new: true }
+);
+
   if (!task) return res.status(404).json({ message: "Task not found" });
   res.json(task);
 });
@@ -97,10 +98,10 @@ app.patch("/tasks/:id/status", authMiddleware, async (req, res) => {
 app.patch("/tasks/:id/priority", authMiddleware, async (req, res) => {
   const { priority } = req.body;
   const task = await Task.findOneAndUpdate(
-    { _id: req.params.id, userId: userId },
-    { priority },
-    { new: true }
-  );
+  { _id: req.params.id, userId: req.userId },
+  { $set: { priority } },
+  { new: true }
+);
   if (!task) return res.status(404).json({ message: "Task not found" });
   res.json(task);
 });
